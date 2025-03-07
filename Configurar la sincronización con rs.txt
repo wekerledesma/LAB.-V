@@ -1,0 +1,53 @@
+Configurar la sincronización con rsync
+En el servidor primario (donde los archivos se generan):
+
+
+mkdir -p /home/weker/sync_folder  # Crear la carpeta de sincronización
+En el servidor secundario (donde se replicarán los archivos):
+
+
+mkdir -p /home/weker/sync_folder  # Crear la misma carpeta en el secundario
+Ahora, en el servidor primario, ejecuta manualmente rsync para probar la sincronización:
+
+
+rsync -avz /home/weker/sync_folder/ weker@IP_DEL_SECUNDARIO:/home/weker/sync_folder/
+⚠️ Reemplaza IP_DEL_SECUNDARIO con la dirección IP del servidor secundario
+
+Si esto funciona, puedes automatizarlo con cron.
+
+2️⃣ Configurar la sincronización automática con cron
+Edita el crontab en el servidor primario:
+
+
+crontab -e
+Agrega la siguiente línea para ejecutar rsync cada minuto:
+
+
+* * * * * rsync -avz /home/weker/sync_folder/ weker@IP_DEL_SECUNDARIO:/home/weker/sync_folder/ > /home/weker/sync_log.txt 2>&1
+Explicación:
+
+* * * * * → Se ejecuta cada minuto
+rsync -avz → Sincroniza en modo archivos y subdirectorios
+> /home/weker/sync_log.txt 2>&1 → Guarda la salida en un archivo de log
+Guarda y cierra el archivo.
+
+3️⃣ Prueba si la sincronización funciona correctamente
+En el servidor primario, crea un archivo de prueba:
+
+
+touch /home/weker/sync_folder/test_file.txt
+Espera un minuto y revisa en el servidor secundario:
+
+
+ls -l /home/weker/sync_folder/
+Si el archivo aparece en el secundario, la sincronización funciona correctamente. 🚀
+
+4️⃣ Verificación de cron si hay problemas
+Si el archivo no aparece en el secundario, revisa el log de cron en el servidor primario:
+
+sudo tail -f /var/log/cron
+Si cron no está funcionando, intenta reiniciarlo:
+
+
+sudo systemctl restart crond
+sudo systemctl enable crond
