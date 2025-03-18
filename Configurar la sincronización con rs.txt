@@ -51,3 +51,73 @@ Si cron no está funcionando, intenta reiniciarlo:
 
 sudo systemctl restart crond
 sudo systemctl enable crond
+Cluster de Alta Disponibilidad HTTP. comando.
+ Instalar Apache en ambos servidores
+
+sudo dnf install httpd -y
+2. Habilitar y arrancar el servicio Apache
+
+sudo systemctl enable --now httpd
+3. Crear la página web en cada servidor
+En server1:
+
+
+echo "<h1>Este es el servidor 1</h1>" | sudo tee /var/www/html/index.html
+En server2:
+
+echo "<h1>Este es el servidor 2</h1>" | sudo tee /var/www/html/index.html
+
+4. Ajustar el firewall
+sudo firewall-cmd --permanent --add-service=http
+sudo firewall-cmd --reload
+
+5. Instalar Keepalived en ambos servidores
+sudo dnf install keepalived -y
+
+6. Configurar Keepalived en server1 (/etc/keepalived/keepalived.conf)
+sudo nano /etc/keepalived/keepalived.conf
+Añadir la siguiente configuración en server1:
+vrrp_instance VI_1 {
+    state MASTER
+    interface ens33
+    virtual_router_id 51
+    priority 150
+    advert_int 1
+    authentication {
+        auth_type PASS
+        auth_pass 12345
+    }
+    virtual_ipaddress {
+        192.168.1.200/24
+    }
+}
+7. Configurar Keepalived en server2 (/etc/keepalived/keepalived.conf)
+sudo nano /etc/keepalived/keepalived.conf
+Añadir la siguiente configuración en server2:
+
+vrrp_instance VI_1 {
+    state BACKUP
+    interface ens33
+    virtual_router_id 51
+    priority 100
+    advert_int 1
+    authentication {
+        auth_type PASS
+        auth_pass 12345
+    }
+    virtual_ipaddress {
+        192.168.1.200/24
+    }
+}
+8. Habilitar y arrancar Keepalived en ambos servidores
+sudo systemctl enable --now keepalived
+
+9. Verificar la IP flotante en el servidor MASTER
+ip a | grep 192.168.1.200
+
+10. Validar la alta disponibilidad
+Acceder a http://192.168.1.200 desde un navegador.
+Apagar server1 (sudo poweroff) y probar nuevamente.
+Verificar que server2 asume la IP flotante:
+
+ip a | grep 192.168.1.200
